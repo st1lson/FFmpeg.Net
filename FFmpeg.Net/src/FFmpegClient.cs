@@ -8,13 +8,12 @@ namespace FFmpeg.Net
 {
     public class FFmpegClient
     {
-        private readonly string _ffmpegDirecotory;
+        private readonly FFmpegClientOptions _options;
+        private readonly CommandCreator _commandCreator;
 
-        public FFmpegClient(string ffmpegDirecotry)
+        public FFmpegClient(FFmpegClientOptions options)
         {
-            _ffmpegDirecotory = IsDirecotryValid(ffmpegDirecotry)
-                ? ffmpegDirecotry
-                : throw new Exception($"FFmpeg does not exists '{ffmpegDirecotry}'");
+            _options = options;
         }
 
         public void Convert(MediaFile media, VideoType destinationType)
@@ -26,10 +25,12 @@ namespace FFmpeg.Net
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
                     FileName = "cmd.exe",
-                    Arguments = $"ffmpeg -i {media.Name}.{media.VideoType.ToString().ToLower()} {media.Name}.{destinationType.ToString().ToLower()}"
+                    Arguments = _commandCreator.Convert(media.Name, media.VideoType, destinationType)
                 };
                 process.StartInfo = startInfo;
                 process.Start();
+
+                process.WaitForExit();
             }
             catch (Exception e)
             {
@@ -37,14 +38,34 @@ namespace FFmpeg.Net
             }
         }
 
-        private static bool IsDirecotryValid(string directory)
+        public void Split(MediaFile media, int seconds)
+        {
+            try
+            {
+                Process process = new();
+                ProcessStartInfo startInfo = new()
+                {
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    FileName = "cmd.exe",
+                    Arguments = _commandCreator.Split(media.Name, media.VideoType, seconds)
+                };
+                process.StartInfo = startInfo;
+                process.Start();
+
+                process.WaitForExit();
+            }
+            catch (Exception e)
+            {
+                throw new Exception(nameof(e));
+            }
+        }
+
+        private static void CheckDirecotryValid(string directory)
         {
             if (!File.Exists(directory) || !directory.Contains("ffmpeg.exe"))
             {
                 throw new Exception("FFmpeg file does not found");
             }
-
-            return true;
         }
     }
 }
