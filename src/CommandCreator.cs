@@ -1,6 +1,6 @@
-﻿using System.IO;
+﻿using FFmpeg.Net.Enums;
+using System.IO;
 using System.Text;
-using FFmpeg.Net.Enums;
 
 namespace FFmpeg.Net
 {

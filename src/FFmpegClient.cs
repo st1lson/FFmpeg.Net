@@ -22,122 +22,117 @@ namespace FFmpeg.Net
 
         public async Task ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory = "")
         {
-            try
+            if (media is null)
             {
-                var (name, videoType) = media;
-                using Process process = new();
-                string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
-                ProcessStartInfo startInfo = new()
-                {
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    FileName = _options.FFmpegDirectory,
-                    Arguments = ffmpegCommand
-                };
-                process.StartInfo = startInfo;
-                process.Start();
-
-                await process.WaitForExitAsync();
-
-                if (!_options.DeleteProcessedFile)
-                {
-                    return;
-                }
-
-                string filePath = _options.SourceFilePath.Length != 0
-                    ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                    : null;
-                filePath += $"{name}.{videoType.ToString().ToLower()}";
-                File.Delete(filePath);
+                throw new ArgumentNullException(nameof(media));
             }
-            catch (Exception e)
+
+            var (name, videoType) = media;
+            using Process process = new();
+            string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
+            ProcessStartInfo startInfo = new()
             {
-                throw new Exception(e.Message);
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = _options.FFmpegDirectory,
+                Arguments = ffmpegCommand
+            };
+            process.StartInfo = startInfo;
+            process.Start();
+
+            await process.WaitForExitAsync();
+
+            if (!_options.DeleteProcessedFile)
+            {
+                return;
             }
+
+            string filePath = _options.SourceFilePath.Length != 0
+                ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                : null;
+            filePath += $"{name}.{videoType.ToString().ToLower()}";
+            File.Delete(filePath);
         }
 
         public async Task SplitAsync(MediaFile media, int seconds, string destinationDirectory = "")
         {
-            try
+            if (media is null)
             {
-                var (name, videoType) = media;
-                using Process process = new();
-                string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, name, videoType, seconds, destinationDirectory);
-                ProcessStartInfo startInfo = new()
-                {
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    FileName = _options.FFmpegDirectory,
-                    Arguments = ffmpegCommand
-                };
-                process.StartInfo = startInfo;
-                process.Start();
+                throw new ArgumentNullException(nameof(media));
+            }
 
-                await process.WaitForExitAsync();
+            var (name, videoType) = media;
+            using Process process = new();
+            string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, name, videoType, seconds, destinationDirectory);
+            ProcessStartInfo startInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = _options.FFmpegDirectory,
+                Arguments = ffmpegCommand
+            };
+            process.StartInfo = startInfo;
+            process.Start();
 
-                if (!_options.DeleteProcessedFile)
+            await process.WaitForExitAsync();
+
+            if (!_options.DeleteProcessedFile)
+            {
+                return;
+            }
+
+            string filePath = _options.SourceFilePath.Length != 0
+                ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                : null;
+            filePath += $"{name}.{videoType.ToString().ToLower()}";
+            File.Delete(filePath);
+        }
+
+        public async Task MergeAsync(IEnumerable<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
+        {
+            await using (StreamWriter writer = new("list.txt"))
+            {
+                foreach (MediaFile mediaFile in mediaFiles)
                 {
-                    return;
+                    if (mediaFile is null)
+                    {
+                        throw new ArgumentNullException(nameof(mediaFile));
+                    }
+
+                    var (name, videoType) = mediaFile;
+                    string filePath = _options.SourceFilePath.Length != 0
+                        ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                        : null;
+                    filePath += $"{name}.{videoType.ToString().ToLower()}";
+                    await writer.WriteLineAsync($"file '{filePath}' ");
                 }
+            }
 
+            using Process process = new();
+            string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
+            ProcessStartInfo startInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = _options.FFmpegDirectory,
+                Arguments = ffmpegCommand
+            };
+            process.StartInfo = startInfo;
+            process.Start();
+
+            await process.WaitForExitAsync();
+
+            File.Delete("list.txt");
+
+            if (!_options.DeleteProcessedFile)
+            {
+                return;
+            }
+
+            foreach (var (name, videoType) in mediaFiles)
+            {
                 string filePath = _options.SourceFilePath.Length != 0
                     ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
                     : null;
                 filePath += $"{name}.{videoType.ToString().ToLower()}";
                 File.Delete(filePath);
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
-        }
-
-        public async Task MergeAsync(IEnumerable<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
-        {
-            try
-            {
-                await using (StreamWriter writer = new("list.txt"))
-                {
-                    foreach (var (name, videoType) in mediaFiles)
-                    {
-                        string filePath = _options.SourceFilePath.Length != 0
-                            ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                            : null;
-                        filePath += $"{name}.{videoType.ToString().ToLower()}";
-                        await writer.WriteLineAsync($"file '{filePath}' ");
-                    }
-                }
-
-                using Process process = new();
-                string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
-                ProcessStartInfo startInfo = new()
-                {
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    FileName = _options.FFmpegDirectory,
-                    Arguments = ffmpegCommand
-                };
-                process.StartInfo = startInfo;
-                process.Start();
-
-                await process.WaitForExitAsync();
-
-                File.Delete("list.txt");
-
-                if (!_options.DeleteProcessedFile)
-                {
-                    return;
-                }
-
-                foreach (var (name, videoType) in mediaFiles)
-                {
-                    string filePath = _options.SourceFilePath.Length != 0
-                        ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                        : null;
-                    filePath += $"{name}.{videoType.ToString().ToLower()}";
-                    File.Delete(filePath);
-                }
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
             }
         }
 
