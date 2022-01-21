@@ -24,8 +24,9 @@ namespace FFmpeg.Net
         {
             try
             {
+                var (name, videoType) = media;
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, media.Name, media.VideoType, destinationType, destinationDirectory);
+                string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -36,6 +37,17 @@ namespace FFmpeg.Net
                 process.Start();
 
                 await process.WaitForExitAsync();
+
+                if (!_options.DeleteProcessedFile)
+                {
+                    return;
+                }
+
+                string filePath = _options.SourceFilePath.Length != 0
+                    ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                    : null;
+                filePath += $"{name}.{videoType.ToString().ToLower()}";
+                File.Delete(filePath);
             }
             catch (Exception e)
             {
@@ -47,8 +59,9 @@ namespace FFmpeg.Net
         {
             try
             {
+                var (name, videoType) = media;
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, media.Name, media.VideoType, seconds, destinationDirectory);
+                string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, name, videoType, seconds, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -59,6 +72,17 @@ namespace FFmpeg.Net
                 process.Start();
 
                 await process.WaitForExitAsync();
+
+                if (!_options.DeleteProcessedFile)
+                {
+                    return;
+                }
+
+                string filePath = _options.SourceFilePath.Length != 0
+                    ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                    : null;
+                filePath += $"{name}.{videoType.ToString().ToLower()}";
+                File.Delete(filePath);
             }
             catch (Exception e)
             {
@@ -74,7 +98,11 @@ namespace FFmpeg.Net
                 {
                     foreach (var (name, videoType) in mediaFiles)
                     {
-                        await writer.WriteLineAsync($"file '{name}.{videoType.ToString().ToLower()}' ");
+                        string filePath = _options.SourceFilePath.Length != 0
+                            ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                            : null;
+                        filePath += $"{name}.{videoType.ToString().ToLower()}";
+                        await writer.WriteLineAsync($"file '{filePath}' ");
                     }
                 }
 
@@ -90,6 +118,22 @@ namespace FFmpeg.Net
                 process.Start();
 
                 await process.WaitForExitAsync();
+
+                File.Delete("list.txt");
+
+                if (!_options.DeleteProcessedFile)
+                {
+                    return;
+                }
+
+                foreach (var (name, videoType) in mediaFiles)
+                {
+                    string filePath = _options.SourceFilePath.Length != 0
+                        ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
+                        : null;
+                    filePath += $"{name}.{videoType.ToString().ToLower()}";
+                    File.Delete(filePath);
+                }
             }
             catch (Exception e)
             {
