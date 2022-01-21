@@ -1,26 +1,34 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using FFmpeg.Net.Data;
+﻿using System.Text;
 using FFmpeg.Net.Enums;
 
 namespace FFmpeg.Net
 {
     internal sealed class CommandCreator
     {
-        public string Convert(string fileName, VideoType fileVideoType, VideoType destinationType)
+        public string Convert(string fileName, VideoType fileVideoType, VideoType destinationType, string destinationDirectory)
         {
-            return $@"-i {fileName}.{fileVideoType.ToString().ToLower()} {fileName}.{destinationType.ToString().ToLower()}";
+            return $@"-i {fileName}.{fileVideoType.ToString().ToLower()} {(destinationDirectory.Length != 0 ? destinationDirectory + "/" : null)}{fileName}.{destinationType.ToString().ToLower()}";
         }
 
-        public string Split(string fileName, VideoType fileVideoType, int seconds)
+        public string Split(string fileName, VideoType fileVideoType, int seconds, string destinationDirectory)
         {
-            return $@"-i {fileName}.{fileVideoType.ToString().ToLower()} -c copy -map 0 -segment_time 00:00:{seconds} -f segment -reset_timestamps 1 {fileName}%03d.{fileVideoType.ToString().ToLower()}";
+            StringBuilder builder = new();
+            builder.Append($@"-i {fileName}.{fileVideoType.ToString().ToLower()} ");
+            builder.Append($"-c copy -map 0 -segment_time 00:00:{seconds} -f segment -reset_timestamps 1 ");
+            builder.Append(destinationDirectory.Length != 0 ? destinationDirectory + "/" : null);
+            builder.Append($"{fileName}%03d.{fileVideoType.ToString().ToLower()}");
+
+            return builder.ToString();
         }
 
-        public string Merge(string destinationFileName, VideoType destinationType)
+        public string Merge(string destinationFileName, VideoType destinationType, string destinationDirectory)
         {
-            return $@"-safe 0 -f concat -i list.txt -c copy {destinationFileName}.{destinationType.ToString().ToLower()}";
+            StringBuilder builder = new();
+            builder.Append(@"-safe 0 -f concat -i list.txt -c copy ");
+            builder.Append(destinationDirectory.Length != 0 ? destinationDirectory + "/" : null);
+            builder.Append($"{destinationFileName}.{destinationType.ToString().ToLower()}");
+
+            return builder.ToString();
         }
     }
 }

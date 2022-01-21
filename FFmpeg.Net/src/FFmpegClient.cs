@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace FFmpeg.Net
@@ -22,12 +20,12 @@ namespace FFmpeg.Net
             _commandCreator = new CommandCreator();
         }
 
-        public async Task ConvertAsync(MediaFile media, VideoType destinationType)
+        public async Task ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory = "")
         {
             try
             {
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Convert(media.Name, media.VideoType, destinationType);
+                string ffmpegCommand = _commandCreator.Convert(media.Name, media.VideoType, destinationType, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -45,12 +43,12 @@ namespace FFmpeg.Net
             }
         }
 
-        public async Task SplitAsync(MediaFile media, int seconds)
+        public async Task SplitAsync(MediaFile media, int seconds, string destinationDirectory = "")
         {
             try
             {
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Split(media.Name, media.VideoType, seconds);
+                string ffmpegCommand = _commandCreator.Split(media.Name, media.VideoType, seconds, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -68,20 +66,20 @@ namespace FFmpeg.Net
             }
         }
 
-        public async Task MergeAsync(IEnumerable<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType)
+        public async Task MergeAsync(IEnumerable<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
         {
             try
             {
                 await using (StreamWriter writer = new("list.txt"))
                 {
-                    foreach (MediaFile mediaFile in mediaFiles)
+                    foreach (var (name, videoType) in mediaFiles)
                     {
-                        await writer.WriteLineAsync($"file '{mediaFile.Name}.{mediaFile.VideoType.ToString().ToLower()}' ");
+                        await writer.WriteLineAsync($"file '{name}.{videoType.ToString().ToLower()}' ");
                     }
                 }
 
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType);
+                string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
