@@ -25,7 +25,7 @@ namespace FFmpeg.Net
             try
             {
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Convert(media.Name, media.VideoType, destinationType, destinationDirectory);
+                string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, media.Name, media.VideoType, destinationType, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -48,7 +48,7 @@ namespace FFmpeg.Net
             try
             {
                 using Process process = new();
-                string ffmpegCommand = _commandCreator.Split(media.Name, media.VideoType, seconds, destinationDirectory);
+                string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, media.Name, media.VideoType, seconds, destinationDirectory);
                 ProcessStartInfo startInfo = new()
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
