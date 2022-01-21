@@ -20,7 +20,15 @@ namespace FFmpeg.Net
             _commandCreator = new CommandCreator();
         }
 
-        public async Task ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory = "")
+        /// <summary>
+        /// Converts a media file into the selected video type.
+        /// </summary>
+        /// <param name="media"></param>
+        /// <param name="destinationType"></param>
+        /// <param name="destinationDirectory"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="media"/> is null.</exception>
+        public async Task<string> ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory = "")
         {
             if (media is null)
             {
@@ -31,16 +39,28 @@ namespace FFmpeg.Net
             string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
             await Run(ffmpegCommand);
 
+            string convertedFile = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
+
             if (!_options.DeleteProcessedFile)
             {
-                return;
+                return convertedFile;
             }
 
             string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
             File.Delete(filePath);
+
+            return convertedFile;
         }
 
-        public async Task SplitAsync(MediaFile media, int seconds, string destinationDirectory = "")
+        /// <summary>
+        /// Splits a media file into files with the selected duration.
+        /// </summary>
+        /// <param name="media"></param>
+        /// <param name="seconds"></param>
+        /// <param name="destinationDirectory"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="media"/> is null.</exception>
+        public async Task<string> SplitAsync(MediaFile media, int seconds, string destinationDirectory = "")
         {
             if (media is null)
             {
@@ -53,14 +73,26 @@ namespace FFmpeg.Net
 
             if (!_options.DeleteProcessedFile)
             {
-                return;
+                return destinationDirectory;
             }
 
             string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
             File.Delete(filePath);
+
+            return destinationDirectory;
         }
 
-        public async Task MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
+        /// <summary>
+        /// Merges a collection of media files into one file.
+        /// </summary>
+        /// <param name="mediaFiles"></param>
+        /// <param name="destinationFileName"></param>
+        /// <param name="destinationType"></param>
+        /// <param name="destinationDirectory"></param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">Throws when <paramref name="mediaFiles"/> is an empty collection.</exception>
+        /// <exception cref="ArgumentNullException">Throws when the <paramref name="mediaFiles"/> element is null.</exception>
+        public async Task<string> MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
         {
             if (mediaFiles.Count == 0)
             {
@@ -77,10 +109,7 @@ namespace FFmpeg.Net
                     }
 
                     var (name, videoType) = mediaFile;
-                    string filePath = _options.SourceFilePath.Length != 0
-                        ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                        : null;
-                    filePath += $"{name}.{videoType.ToString().ToLower()}";
+                    string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
                     await writer.WriteLineAsync($"file '{filePath}' ");
                 }
             }
@@ -90,9 +119,11 @@ namespace FFmpeg.Net
 
             File.Delete("list.txt");
 
+            string mergedFile = _commandCreator.GetFullPath(_options.SourceFilePath, destinationFileName, destinationType);
+
             if (!_options.DeleteProcessedFile)
             {
-                return;
+                return mergedFile;
             }
 
             foreach (var (name, videoType) in mediaFiles)
@@ -100,8 +131,15 @@ namespace FFmpeg.Net
                 string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
                 File.Delete(filePath);
             }
+
+            return mergedFile;
         }
 
+        /// <summary>
+        /// Runs the specified FFmpeg command.
+        /// </summary>
+        /// <param name="ffmpegCommand"></param>
+        /// <returns></returns>
         public async Task Run(string ffmpegCommand)
         {
             using Process process = new();
@@ -117,6 +155,11 @@ namespace FFmpeg.Net
             await process.WaitForExitAsync();
         }
 
+        /// <summary>
+        /// Checks if the FFmpeg directory is valid.
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <exception cref="Exception">Throws when the FFmpeg file is not found</exception>
         private static void CheckIsDirectoryValid(string directory)
         {
             if (!File.Exists(directory))
