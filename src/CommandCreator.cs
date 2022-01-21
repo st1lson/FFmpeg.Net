@@ -39,5 +39,14 @@ namespace FFmpeg.Net
 
             return builder.ToString();
         }
+
+        internal string GetFullPath(string sourceFile, string fileName, VideoType videoType)
+        {
+            StringBuilder builder = new();
+            builder.Append($"{(sourceFile.Length != 0 ? (Path.GetFullPath(sourceFile) + @"\") : null)}");
+            builder.Append($"{fileName}.{videoType.ToString().ToLower()}");
+
+            return builder.ToString();
+        }
     }
 }

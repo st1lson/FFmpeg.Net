@@ -28,28 +28,15 @@ namespace FFmpeg.Net
             }
 
             var (name, videoType) = media;
-            using Process process = new();
             string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
-            ProcessStartInfo startInfo = new()
-            {
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = _options.FFmpegDirectory,
-                Arguments = ffmpegCommand
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-
-            await process.WaitForExitAsync();
+            await Run(ffmpegCommand);
 
             if (!_options.DeleteProcessedFile)
             {
                 return;
             }
 
-            string filePath = _options.SourceFilePath.Length != 0
-                ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                : null;
-            filePath += $"{name}.{videoType.ToString().ToLower()}";
+            string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
             File.Delete(filePath);
         }
 
@@ -61,33 +48,25 @@ namespace FFmpeg.Net
             }
 
             var (name, videoType) = media;
-            using Process process = new();
             string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, name, videoType, seconds, destinationDirectory);
-            ProcessStartInfo startInfo = new()
-            {
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = _options.FFmpegDirectory,
-                Arguments = ffmpegCommand
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-
-            await process.WaitForExitAsync();
+            await Run(ffmpegCommand);
 
             if (!_options.DeleteProcessedFile)
             {
                 return;
             }
 
-            string filePath = _options.SourceFilePath.Length != 0
-                ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                : null;
-            filePath += $"{name}.{videoType.ToString().ToLower()}";
+            string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
             File.Delete(filePath);
         }
 
-        public async Task MergeAsync(IEnumerable<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
+        public async Task MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
         {
+            if (mediaFiles.Count == 0)
+            {
+                throw new NullReferenceException(nameof(mediaFiles));
+            }
+
             await using (StreamWriter writer = new("list.txt"))
             {
                 foreach (MediaFile mediaFile in mediaFiles)
@@ -106,18 +85,8 @@ namespace FFmpeg.Net
                 }
             }
 
-            using Process process = new();
             string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
-            ProcessStartInfo startInfo = new()
-            {
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = _options.FFmpegDirectory,
-                Arguments = ffmpegCommand
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-
-            await process.WaitForExitAsync();
+            await Run(ffmpegCommand);
 
             File.Delete("list.txt");
 
@@ -128,12 +97,24 @@ namespace FFmpeg.Net
 
             foreach (var (name, videoType) in mediaFiles)
             {
-                string filePath = _options.SourceFilePath.Length != 0
-                    ? (Path.GetFullPath(_options.SourceFilePath) + @"\")
-                    : null;
-                filePath += $"{name}.{videoType.ToString().ToLower()}";
+                string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
                 File.Delete(filePath);
             }
+        }
+
+        public async Task Run(string ffmpegCommand)
+        {
+            using Process process = new();
+            ProcessStartInfo startInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = _options.FFmpegDirectory,
+                Arguments = ffmpegCommand
+            };
+            process.StartInfo = startInfo;
+            process.Start();
+
+            await process.WaitForExitAsync();
         }
 
         private static void CheckIsDirectoryValid(string directory)

@@ -2,6 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <Authors>st1lson</Authors>
+    <Company />
+    <Product />
+    <RepositoryUrl></RepositoryUrl>
+    <PackageTags>FFmpeg,  Split Video, FFmpeg NET</PackageTags>
+    <PackageProjectUrl>https://github.com/st1lson/FFmpeg.Net</PackageProjectUrl>
+    <Copyright>2022 st1lson. All rights reserved.</Copyright>
+    <Description>FFmpeg wrapper for .Net.</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
 </Project>
