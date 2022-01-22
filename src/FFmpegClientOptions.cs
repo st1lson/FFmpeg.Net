@@ -1,4 +1,4 @@
 ﻿namespace FFmpeg.Net
 {
-    public record FFmpegClientOptions(string FFmpegDirectory, string SourceFilePath, bool DeleteProcessedFile);
+    public record FFmpegClientOptions(string FFmpegDirectory, bool DeleteProcessedFile);
 }

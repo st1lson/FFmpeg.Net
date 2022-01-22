@@ -1,31 +1,30 @@
-﻿using FFmpeg.Net.Enums;
+﻿using System;
+using FFmpeg.Net.Enums;
 using System.IO;
 using System.Text;
+using FFmpeg.Net.Data;
 
 namespace FFmpeg.Net
 {
     internal sealed class CommandCreator
     {
-        public string Convert(string sourceFilePath, string fileName, VideoType fileVideoType, VideoType destinationType, string destinationDirectory)
+        public string Convert(MediaFile mediaFile, VideoType destinationType, string destinationDirectory)
         {
             StringBuilder builder = new();
-            builder.Append($@"-i {(sourceFilePath.Length != 0 ? (Path.GetFullPath(sourceFilePath) + "/") : null)}");
-            builder.Append($"{fileName}.{fileVideoType.ToString().ToLower()} ");
+            builder.Append($@"-i {mediaFile.FullPath} ");
             builder.Append(
-                $"{(destinationDirectory.Length != 0 ? (Path.GetFullPath(destinationDirectory) + "/") : null)}");
-            builder.Append($"{fileName}.{destinationType.ToString().ToLower()}");
+                $"{GetFullPath(destinationDirectory, Path.GetFileNameWithoutExtension(mediaFile.FileName), destinationType)}");
 
             return builder.ToString();
         }
 
-        public string Split(string sourceFilePath, string fileName, VideoType fileVideoType, int seconds, string destinationDirectory)
+        public string Split(MediaFile mediaFile, int seconds, string destinationDirectory)
         {
             StringBuilder builder = new();
-            builder.Append($@"-i {(sourceFilePath.Length != 0 ? (Path.GetFullPath(sourceFilePath) + "/") : null)}");
-            builder.Append($"{fileName}.{fileVideoType.ToString().ToLower()} ");
+            builder.Append($@"-i {mediaFile.FullPath} ");
             builder.Append($"-c copy -map 0 -segment_time 00:00:{seconds} -f segment -reset_timestamps 1 ");
-            builder.Append(destinationDirectory.Length != 0 ? (Path.GetFullPath(destinationDirectory) + "/") : null);
-            builder.Append($"{fileName}%03d.{fileVideoType.ToString().ToLower()}");
+            builder.Append(
+                $"{GetFullPath(destinationDirectory, Path.GetFileNameWithoutExtension(mediaFile.FileName), mediaFile.VideoType, true)}");
 
             return builder.ToString();
         }
@@ -33,18 +32,18 @@ namespace FFmpeg.Net
         public string Merge(string destinationFileName, VideoType destinationType, string destinationDirectory)
         {
             StringBuilder builder = new();
-            builder.Append($@"-safe 0 -f concat -i list.txt -c copy ");
-            builder.Append(destinationDirectory.Length != 0 ? (Path.GetFullPath(destinationDirectory) + "/") : null);
-            builder.Append($"{destinationFileName}.{destinationType.ToString().ToLower()}");
+            builder.Append("-safe 0 -f concat -i list.txt -c copy ");
+            Console.WriteLine($"here: {GetFullPath(destinationDirectory, destinationFileName, destinationType)}");
+            builder.Append($"{GetFullPath(destinationDirectory, destinationFileName, destinationType)}");
 
             return builder.ToString();
         }
 
-        internal string GetFullPath(string sourceFile, string fileName, VideoType videoType)
+        internal string GetFullPath(string sourceFile, string fileName, VideoType videoType, bool isSplit = false)
         {
             StringBuilder builder = new();
             builder.Append($"{(sourceFile.Length != 0 ? (Path.GetFullPath(sourceFile) + @"\") : null)}");
-            builder.Append($"{fileName}.{videoType.ToString().ToLower()}");
+            builder.Append($"{fileName}{(isSplit ? "%03d." : '.')}{videoType.ToString().ToLower()}");
 
             return builder.ToString();
         }

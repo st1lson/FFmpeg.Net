@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace FFmpeg.Net
@@ -35,19 +36,23 @@ namespace FFmpeg.Net
                 throw new ArgumentNullException(nameof(media));
             }
 
-            var (name, videoType) = media;
-            string ffmpegCommand = _commandCreator.Convert(_options.SourceFilePath, name, videoType, destinationType, destinationDirectory);
-            await Run(ffmpegCommand);
+            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            {
+                Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
+            }
 
-            string convertedFile = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
+            var (name, videoType) = media;
+            string ffmpegCommand = _commandCreator.Convert(media, destinationType, destinationDirectory);
+            await RunAsync(ffmpegCommand);
+
+            string convertedFile = _commandCreator.GetFullPath(destinationDirectory, name, destinationType);
 
             if (!_options.DeleteProcessedFile)
             {
                 return convertedFile;
             }
 
-            string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
-            File.Delete(filePath);
+            File.Delete(media.FullPath);
 
             return convertedFile;
         }
@@ -67,17 +72,21 @@ namespace FFmpeg.Net
                 throw new ArgumentNullException(nameof(media));
             }
 
+            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            {
+                Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
+            }
+
             var (name, videoType) = media;
-            string ffmpegCommand = _commandCreator.Split(_options.SourceFilePath, name, videoType, seconds, destinationDirectory);
-            await Run(ffmpegCommand);
+            string ffmpegCommand = _commandCreator.Split(media, seconds, destinationDirectory);
+            await RunAsync(ffmpegCommand);
 
             if (!_options.DeleteProcessedFile)
             {
                 return destinationDirectory;
             }
 
-            string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
-            File.Delete(filePath);
+            File.Delete(media.FullPath);
 
             return destinationDirectory;
         }
@@ -99,6 +108,11 @@ namespace FFmpeg.Net
                 throw new NullReferenceException(nameof(mediaFiles));
             }
 
+            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            {
+                Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
+            }
+
             await using (StreamWriter writer = new("list.txt"))
             {
                 foreach (MediaFile mediaFile in mediaFiles)
@@ -108,28 +122,25 @@ namespace FFmpeg.Net
                         throw new ArgumentNullException(nameof(mediaFile));
                     }
 
-                    var (name, videoType) = mediaFile;
-                    string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
-                    await writer.WriteLineAsync($"file '{filePath}' ");
+                    await writer.WriteLineAsync($"file '{mediaFile.FullPath}' ");
                 }
             }
 
             string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
-            await Run(ffmpegCommand);
+            await RunAsync(ffmpegCommand);
 
             File.Delete("list.txt");
 
-            string mergedFile = _commandCreator.GetFullPath(_options.SourceFilePath, destinationFileName, destinationType);
+            string mergedFile = _commandCreator.GetFullPath(destinationDirectory, destinationFileName, destinationType);
 
             if (!_options.DeleteProcessedFile)
             {
                 return mergedFile;
             }
 
-            foreach (var (name, videoType) in mediaFiles)
+            foreach (MediaFile media in mediaFiles)
             {
-                string filePath = _commandCreator.GetFullPath(_options.SourceFilePath, name, videoType);
-                File.Delete(filePath);
+                File.Delete(media.FullPath);
             }
 
             return mergedFile;
@@ -140,7 +151,7 @@ namespace FFmpeg.Net
         /// </summary>
         /// <param name="ffmpegCommand"></param>
         /// <returns></returns>
-        public async Task Run(string ffmpegCommand)
+        public async Task RunAsync(string ffmpegCommand)
         {
             using Process process = new();
             ProcessStartInfo startInfo = new()
@@ -162,7 +173,7 @@ namespace FFmpeg.Net
         /// <exception cref="Exception">Throws when the FFmpeg file is not found</exception>
         private static void CheckIsDirectoryValid(string directory)
         {
-            if (!File.Exists(directory))
+            if (!Regex.IsMatch(Path.GetFileName(directory), @"ffmpeg(\.exe)?$"))
             {
                 throw new Exception("FFmpeg file does not found");
             }
