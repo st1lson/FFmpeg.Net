@@ -1,8 +1,8 @@
-﻿using System;
+﻿using FFmpeg.Net.Data;
 using FFmpeg.Net.Enums;
+using System;
 using System.IO;
 using System.Text;
-using FFmpeg.Net.Data;
 
 namespace FFmpeg.Net
 {

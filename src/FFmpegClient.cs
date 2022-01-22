@@ -29,23 +29,26 @@ namespace FFmpeg.Net
         /// <param name="destinationDirectory"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="media"/> is null.</exception>
-        public async Task<string> ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory = "")
+        public async Task<string> ConvertAsync(MediaFile media, VideoType destinationType, string destinationDirectory)
         {
             if (media is null)
             {
                 throw new ArgumentNullException(nameof(media));
             }
 
-            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            if (!string.IsNullOrEmpty(destinationDirectory) && !Directory.Exists(Path.GetFullPath(destinationDirectory)))
             {
                 Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
             }
 
-            var (name, videoType) = media;
             string ffmpegCommand = _commandCreator.Convert(media, destinationType, destinationDirectory);
             await RunAsync(ffmpegCommand);
 
-            string convertedFile = _commandCreator.GetFullPath(destinationDirectory, name, destinationType);
+            string convertedFile = Path.GetFullPath(_commandCreator.GetFullPath(
+                destinationDirectory,
+                Path.GetFileNameWithoutExtension(media.FilePath),
+                destinationType)
+            );
 
             if (!_options.DeleteProcessedFile)
             {
@@ -65,30 +68,33 @@ namespace FFmpeg.Net
         /// <param name="destinationDirectory"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="media"/> is null.</exception>
-        public async Task<string> SplitAsync(MediaFile media, int seconds, string destinationDirectory = "")
+        public async Task<string> SplitAsync(MediaFile media, int seconds, string destinationDirectory)
         {
             if (media is null)
             {
                 throw new ArgumentNullException(nameof(media));
             }
 
-            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            if (!string.IsNullOrEmpty(destinationDirectory) && !Directory.Exists(Path.GetFullPath(destinationDirectory)))
             {
                 Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
             }
 
-            var (name, videoType) = media;
             string ffmpegCommand = _commandCreator.Split(media, seconds, destinationDirectory);
             await RunAsync(ffmpegCommand);
 
+            string fullPath = string.IsNullOrEmpty(destinationDirectory)
+                ? destinationDirectory
+                : Path.GetFullPath(destinationDirectory);
+
             if (!_options.DeleteProcessedFile)
             {
-                return destinationDirectory;
+                return fullPath;
             }
 
             File.Delete(media.FullPath);
 
-            return destinationDirectory;
+            return fullPath;
         }
 
         /// <summary>
@@ -101,14 +107,14 @@ namespace FFmpeg.Net
         /// <returns></returns>
         /// <exception cref="NullReferenceException">Throws when <paramref name="mediaFiles"/> is an empty collection.</exception>
         /// <exception cref="ArgumentNullException">Throws when the <paramref name="mediaFiles"/> element is null.</exception>
-        public async Task<string> MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory = "")
+        public async Task<string> MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory)
         {
             if (mediaFiles.Count == 0)
             {
                 throw new NullReferenceException(nameof(mediaFiles));
             }
 
-            if (!Directory.Exists(Path.GetFullPath(destinationDirectory)))
+            if (!string.IsNullOrEmpty(destinationDirectory) && !Directory.Exists(Path.GetFullPath(destinationDirectory)))
             {
                 Directory.CreateDirectory(Path.GetFullPath(destinationDirectory));
             }
