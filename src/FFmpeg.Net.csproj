@@ -11,6 +11,7 @@
     <Copyright>2022 st1lson. All rights reserved.</Copyright>
     <Description>FFmpeg wrapper for .Net.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
 </Project>

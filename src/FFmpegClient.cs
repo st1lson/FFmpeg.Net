@@ -6,11 +6,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using FFmpeg.Net.EventArgs;
 
 namespace FFmpeg.Net
 {
     public class FFmpegClient
     {
+        public event Func<RunStartEventArgs, Task> OnRunStarted;
+        public event Func<RunEndedEventArgs, Task> OnRunEnded;
+        public event Func<RunExceptionEventArgs, Task> OnRunException; 
         private readonly FFmpegClientOptions _options;
         private readonly CommandCreator _commandCreator;
 
@@ -42,7 +46,7 @@ namespace FFmpeg.Net
             }
 
             string ffmpegCommand = _commandCreator.Convert(media, destinationType, destinationDirectory);
-            await RunAsync(ffmpegCommand);
+            await RunAsync(ffmpegCommand).ConfigureAwait(false);
 
             string convertedFile = Path.GetFullPath(_commandCreator.GetFullPath(
                 destinationDirectory,
@@ -81,7 +85,7 @@ namespace FFmpeg.Net
             }
 
             string ffmpegCommand = _commandCreator.Split(media, seconds, destinationDirectory);
-            await RunAsync(ffmpegCommand);
+            await RunAsync(ffmpegCommand).ConfigureAwait(false);
 
             string fullPath = string.IsNullOrEmpty(destinationDirectory)
                 ? destinationDirectory
@@ -107,7 +111,10 @@ namespace FFmpeg.Net
         /// <returns></returns>
         /// <exception cref="NullReferenceException">Throws when <paramref name="mediaFiles"/> is an empty collection.</exception>
         /// <exception cref="ArgumentNullException">Throws when the <paramref name="mediaFiles"/> element is null.</exception>
-        public async Task<string> MergeAsync(ICollection<MediaFile> mediaFiles, string destinationFileName, VideoType destinationType, string destinationDirectory)
+        public async Task<string> MergeAsync(ICollection<MediaFile> mediaFiles,
+            string destinationFileName,
+            VideoType destinationType,
+            string destinationDirectory)
         {
             if (mediaFiles.Count == 0)
             {
@@ -128,12 +135,12 @@ namespace FFmpeg.Net
                         throw new ArgumentNullException(nameof(mediaFile));
                     }
 
-                    await writer.WriteLineAsync($"file '{mediaFile.FullPath}' ");
+                    await writer.WriteLineAsync($"file '{mediaFile.FullPath}' ").ConfigureAwait(false);
                 }
             }
 
             string ffmpegCommand = _commandCreator.Merge(destinationFileName, destinationType, destinationDirectory);
-            await RunAsync(ffmpegCommand);
+            await RunAsync(ffmpegCommand).ConfigureAwait(false);
 
             File.Delete("list.txt");
 
@@ -164,12 +171,28 @@ namespace FFmpeg.Net
             {
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = _options.FFmpegDirectory,
+                RedirectStandardOutput = true,
                 Arguments = ffmpegCommand
             };
             process.StartInfo = startInfo;
             process.Start();
 
-            await process.WaitForExitAsync();
+            await OnRunStarted!.Invoke(new RunStartEventArgs(_options, ffmpegCommand)).ConfigureAwait(false);
+
+            string output = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false);
+
+            await process.WaitForExitAsync().ConfigureAwait(false);
+
+            if (process.ExitCode != 0)
+            {
+                await OnRunException!.Invoke(new RunExceptionEventArgs(ffmpegCommand, process.ExitCode)).ConfigureAwait(false);
+            }
+            else
+            {
+                await OnRunEnded!
+                    .Invoke(new RunEndedEventArgs(ffmpegCommand,
+                        output)).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
