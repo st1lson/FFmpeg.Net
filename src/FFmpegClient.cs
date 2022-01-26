@@ -1,12 +1,13 @@
 ﻿using FFmpeg.Net.Data;
 using FFmpeg.Net.Enums;
+using FFmpeg.Net.EventArgs;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using FFmpeg.Net.EventArgs;
 
 namespace FFmpeg.Net
 {
@@ -14,7 +15,7 @@ namespace FFmpeg.Net
     {
         public event Func<RunStartEventArgs, Task> OnRunStarted;
         public event Func<RunEndedEventArgs, Task> OnRunEnded;
-        public event Func<RunExceptionEventArgs, Task> OnRunException; 
+        public event Func<RunExceptionEventArgs, Task> OnRunException;
         private readonly FFmpegClientOptions _options;
         private readonly CommandCreator _commandCreator;
 
@@ -171,7 +172,7 @@ namespace FFmpeg.Net
             {
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = _options.FFmpegDirectory,
-                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 Arguments = ffmpegCommand
             };
             process.StartInfo = startInfo;
@@ -179,20 +180,31 @@ namespace FFmpeg.Net
 
             await OnRunStarted!.Invoke(new RunStartEventArgs(_options, ffmpegCommand)).ConfigureAwait(false);
 
-            string output = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false);
+            string lastLine = null;
+            StringBuilder runMessage = new();
+            while (!process.StandardError.EndOfStream)
+            {
+                string line = await process.StandardError.ReadLineAsync().ConfigureAwait(false);
+                runMessage.AppendLine(line);
+                lastLine = line;
+            }
 
             await process.WaitForExitAsync().ConfigureAwait(false);
 
-            if (process.ExitCode != 0)
+            if (process.ExitCode != 0 || !ContainsError(lastLine))
             {
-                await OnRunException!.Invoke(new RunExceptionEventArgs(ffmpegCommand, process.ExitCode)).ConfigureAwait(false);
+                await OnRunException!.Invoke(new RunExceptionEventArgs(ffmpegCommand, lastLine, process.ExitCode))
+                    .ConfigureAwait(false);
             }
             else
             {
-                await OnRunEnded!
-                    .Invoke(new RunEndedEventArgs(ffmpegCommand,
-                        output)).ConfigureAwait(false);
+                await OnRunEnded!.Invoke(new RunEndedEventArgs(ffmpegCommand, runMessage.ToString())).ConfigureAwait(false);
             }
+        }
+
+        private static bool ContainsError(string errors)
+        {
+            return errors.Contains("muxing overhead");
         }
 
         /// <summary>
