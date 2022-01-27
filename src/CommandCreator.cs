@@ -1,6 +1,5 @@
 ﻿using FFmpeg.Net.Data;
 using FFmpeg.Net.Enums;
-using System;
 using System.IO;
 using System.Text;
 
@@ -33,7 +32,6 @@ namespace FFmpeg.Net
         {
             StringBuilder builder = new();
             builder.Append("-safe 0 -f concat -i list.txt -c copy ");
-            Console.WriteLine($"here: {GetFullPath(destinationDirectory, destinationFileName, destinationType)}");
             builder.Append($"{GetFullPath(destinationDirectory, destinationFileName, destinationType)}");
 
             return builder.ToString();
