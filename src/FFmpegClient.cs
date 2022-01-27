@@ -190,7 +190,10 @@ namespace FFmpeg.Net
             process.StartInfo = startInfo;
             process.Start();
 
-            await OnRunStarted!.Invoke(new RunStartEventArgs(_options, ffmpegCommand)).ConfigureAwait(false);
+            if (OnRunStarted is not null)
+            {
+                await OnRunStarted.Invoke(new RunStartEventArgs(_options, ffmpegCommand)).ConfigureAwait(false);
+            }
 
             string lastLine = null;
             StringBuilder runMessage = new();
@@ -203,12 +206,12 @@ namespace FFmpeg.Net
 
             await process.WaitForExitAsync().ConfigureAwait(false);
 
-            if (process.ExitCode != 0 || !ContainsError(lastLine))
+            if ((process.ExitCode != 0 || !ContainsError(lastLine)) && OnRunException is not null)
             {
                 await OnRunException!.Invoke(new RunExceptionEventArgs(ffmpegCommand, lastLine, process.ExitCode))
                     .ConfigureAwait(false);
             }
-            else
+            else if (OnRunEnded is not null)
             {
                 await OnRunEnded!.Invoke(new RunEndedEventArgs(ffmpegCommand, runMessage.ToString())).ConfigureAwait(false);
             }
@@ -226,6 +229,11 @@ namespace FFmpeg.Net
         /// <exception cref="Exception">Throws when the FFmpeg file is not found</exception>
         private static void CheckIsDirectoryValid(string directory)
         {
+            if (!File.Exists(directory))
+            {
+                throw new FileNotFoundException(directory);
+            }
+
             if (!Regex.IsMatch(Path.GetFileName(directory), @"ffmpeg(\.exe)?$"))
             {
                 throw new Exception("FFmpeg file does not found");
