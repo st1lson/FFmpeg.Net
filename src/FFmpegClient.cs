@@ -13,9 +13,21 @@ namespace FFmpeg.Net
 {
     public class FFmpegClient
     {
+        /// <summary>
+        /// Fires when a process has started.
+        /// </summary>
         public event Func<RunStartEventArgs, Task> OnRunStarted;
+
+        /// <summary>
+        /// Fires when a process has ended.
+        /// </summary>
         public event Func<RunEndedEventArgs, Task> OnRunEnded;
+
+        /// <summary>
+        /// Fires when a process has thrown an exception.
+        /// </summary>
         public event Func<RunExceptionEventArgs, Task> OnRunException;
+
         private readonly FFmpegClientOptions _options;
         private readonly CommandCreator _commandCreator;
 

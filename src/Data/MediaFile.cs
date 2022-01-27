@@ -6,12 +6,24 @@ namespace FFmpeg.Net.Data
 {
     public class MediaFile
     {
+        /// <summary>
+        /// File's path.
+        /// </summary>
         public string FilePath { get; init; }
 
+        /// <summary>
+        /// File's video type.
+        /// </summary>
         public VideoType VideoType { get; init; }
 
+        /// <summary>
+        /// File's name.
+        /// </summary>
         public string FileName => Path.GetFileName(FilePath);
 
+        /// <summary>
+        /// File's full path.
+        /// </summary>
         public string FullPath => Path.GetFullPath(FilePath);
 
         public MediaFile(string filePath)
