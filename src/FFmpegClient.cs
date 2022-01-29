@@ -192,7 +192,7 @@ namespace FFmpeg.Net
 
             if (OnRunStarted is not null)
             {
-                await OnRunStarted.Invoke(new RunStartEventArgs(_options, ffmpegCommand)).ConfigureAwait(false);
+                await OnRunStarted.Invoke(new RunStartEventArgs(ffmpegCommand, _options)).ConfigureAwait(false);
             }
 
             string lastLine = null;
