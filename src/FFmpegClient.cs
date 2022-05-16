@@ -67,7 +67,7 @@ namespace FFmpeg.Net
                 destinationType)
             );
 
-            if (!_options.DeleteProcessedFile)
+            if (!_options.DeleteProcessedFile || media.IsStream)
             {
                 return convertedFile;
             }
@@ -104,7 +104,7 @@ namespace FFmpeg.Net
                 ? destinationDirectory
                 : Path.GetFullPath(destinationDirectory);
 
-            if (!_options.DeleteProcessedFile)
+            if (!_options.DeleteProcessedFile || media.IsStream)
             {
                 return fullPath;
             }

@@ -10,7 +10,7 @@ namespace FFmpeg.Net
         public string Convert(MediaFile mediaFile, VideoType destinationType, string destinationDirectory)
         {
             StringBuilder builder = new();
-            builder.Append($@"-i {mediaFile.FullPath} ");
+            builder.Append($@"-i {(mediaFile.IsStream ? mediaFile.StreamUrl : mediaFile.FullPath)} ");
             builder.Append(
                 $"{GetFullPath(destinationDirectory, Path.GetFileNameWithoutExtension(mediaFile.FileName), destinationType)}");
 
@@ -20,8 +20,8 @@ namespace FFmpeg.Net
         public string Split(MediaFile mediaFile, int seconds, string destinationDirectory)
         {
             StringBuilder builder = new();
-            builder.Append($@"-i {mediaFile.FullPath} ");
-            builder.Append($"-c copy -map 0 -segment_time 00:00:{seconds} -f segment -reset_timestamps 1 ");
+            builder.Append($@"-i {(mediaFile.IsStream ? mediaFile.StreamUrl : mediaFile.FullPath)} ");
+            builder.Append($"-c copy -map 0 -segment_time {seconds} -f segment -reset_timestamps 1 ");
             builder.Append(
                 $"{GetFullPath(destinationDirectory, Path.GetFileNameWithoutExtension(mediaFile.FileName), mediaFile.VideoType, true)}");
 
